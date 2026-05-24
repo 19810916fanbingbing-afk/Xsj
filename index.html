@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>iOS 模拟器 · 真心话大冒险（新增作答输入框）</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+    body {
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    #phone {
+      width: 390px;
+      height: 844px;
+      background: #fff;
+      border-radius: 44px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 30px 60px rgba(0,0,0,0.1);
+      border: 1px solid #e0e0e0;
+      display: flex;
+      flex-direction: column;
+    }
+    .screen {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      background: #ffffff;
+      color: #1c1c1e;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(0);
+      transition: transform 0.32s cubic-bezier(0.36, 0.66, 0.04, 1);
+      will-change: transform;
+      overflow: hidden;
+    }
+    .screen.hidden-left { transform: translateX(-100%); }
+    .screen.hidden-right { transform: translateX(100%); }
+    .status-bar {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 24px 6px 24px;
+      font-weight: 600;
+      font-size: 16px;
+      background: #ffffff;
+      color: #1c1c1e;
+      border-bottom: 0.5px solid #e5e5e5;
+    }
+    .global-toast {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(10px);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 20px;
+      font-size: 15px;
+      z-index: 9999;
+      transition: opacity 0.25s;
+      pointer-events: none;
+      text-align: center;
+    }
+    .toast-success { background: #2ecc40; }
+    .toast-error { background: #ff3b30; }
+    .desktop-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px 8px;
+      padding: 20px 16px;
+    }
+    .app-icon {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      color: #1c1c1e;
+      font-weight: 500;
+    }
+    .app-icon i {
+      font-size: 32px;
+      background: #f2f2f2;
+      padding: 14px;
+      border-radius: 20px;
+      width: 64px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+    }
+    .home-bar {
+      width: 140px;
+      height: 5px;
+      background: #d1d1d6;
+      border-radius: 100px;
+      margin: 10px auto 8px;
+    }
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      padding: 16px;
+    }
+    .numpad-btn {
+      background: #f2f2f2;
+      aspect-ratio: 1;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      color: #1c1c1e;
+      cursor: pointer;
+      user-select: none;
+    }
+    .friend-item {
+      display: flex;
+      align-items: center;
+      padding: 14px;
+      background: #f9f9f9;
+      margin: 6px 12px;
+      border-radius: 14px;
+      color: #1c1c1e;
+      border: 0.5px solid #e5e5e5;
+    }
+    .bubble-left, .bubble-right {
+      max-width: 70%;
+      padding: 10px 14px;
+      margin: 6px 12px;
+      border-radius: 18px;
+      word-break: break-word;
+    }
+    .bubble-left { background: #e9e9eb; color: #1c1c1e; align-self: flex-start; }
+    .bubble-right { background: #007aff; color: white; align-self: flex-end; }
+    button {
+      background: #f2f2f2;
+      border: 0.5px solid #d1d1d6;
+      color: #1c1c1e;
+      padding: 10px 16px;
+      border-radius: 12px;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    input, textarea, select {
+      background: #ffffff;
+      border: 0.5px solid #d1d1d6;
+      border-radius: 12px;
+      padding: 12px;
+      color: #1c1c1e;
+      outline: none;
+      font-size: 16px;
+    }
+    .scroll-box {
+      max-height: 150px;
+      overflow-y: auto;
+      background: #f9f9f9;
+      border-radius: 12px;
+      padding: 8px;
+      margin: 8px 0;
+      border: 0.5px solid #e5e5e5;
+    }
+    .model-item {
+      padding: 10px;
+      background: #ffffff;
+      margin: 4px 0;
+      border-radius: 8px;
+      cursor: pointer;
+      border: 0.5px solid #e5e5e5;
+    }
+    .model-item.selected { background: #e3e3e8; }
+    .back-arrow {
+      font-size: 20px;
+      margin-right: 10px;
+      cursor: pointer;
+      color: #007aff;
+    }
+    .form-section {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .form-label {
+      font-weight: 500;
+      margin-bottom: 4px;
+      color: #3a3a3c;
+    }
+    .video-card{
+      background:#f2f2f2;
+      border-radius:16px;
+      padding:16px;
+      margin:8px;
+      cursor:pointer;
+    }
+    .memo-item{
+      padding:12px;
+      background:#f9f9f9;
+      margin:6px 0;
+      border-radius:12px;
+      cursor:pointer;
+    }
+    .goods-item{
+      padding:12px;
+      background:#f9f9f9;
+      margin:6px 12px;
+      border-radius:12px;
+    }
+
+    /* 真心话大冒险 新增样式 */
+    .game-wrap {
+      padding: 16px;
+      text-align: center;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    .wheel-box {
+      width: 260px;
+      height: 260px;
+      margin: 20px auto;
+      border-radius: 50%;
+      background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #ffe066, #786fa6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: bold;
+      color: #fff;
+      box-shadow: 0 0 20px rgba(0,0,0,0.15);
+      transition: transform 1.2s cubic-bezier(0.17, 0.67, 0.13, 0.99);
+    }
+    .wheel-spin {
+      transform: rotate(1440deg);
+    }
+    .game-result {
+      background: #f9f9f9;
+      border-radius: 16px;
+      padding: 16px;
+      margin: 12px 0;
+      min-height: 120px;
+      text-align:left;
+    }
+    .game-btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .answer-input {
+      width: 100%;
+      height: 100px;
+      margin: 10px 0;
+      resize: none;
+    }
+  </style>
+</head>
+<body>
+<div id="phone">
+  <div id="globalToast" class="global-toast" style="opacity:0;display:none;"></div>
+  <!-- 锁屏 -->
+  <div id="lockScreen" class="screen" style="z-index:100;">
+    <div class="status-bar">
+      <span>9:41</span>
+      <span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center;">
+      <div style="font-size:76px; font-weight:300; color:#1c1c1e;" id="lockTime">9:41</div>
+      <div style="font-size:22px; color:#6c6c70;" id="lockDate">2026年4月19日 星期六</div>
+    </div>
+    <div id="notificationStack" style="position:absolute; top:120px; left:16px; right:16px; display:flex; flex-direction:column; gap:8px;"></div>
+    <div style="margin-bottom:40px; text-align:center; color:#8e8e93;"><i class="fas fa-chevron-up"></i> 上滑解锁</div>
+    <div id="passcodePanel" style="display:none; background:#ffffff; border-radius:32px 32px 0 0; padding:24px 16px;">
+      <div style="font-size:18px; text-align:center; margin-bottom:20px;">输入密码</div>
+      <div id="passcodeDots" style="display:flex; justify-content:center; gap:16px; margin-bottom:24px;">
+        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#d1d1d6;"></span>
+        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#d1d1d6;"></span>
+        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#d1d1d6;"></span>
+        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#d1d1d6;"></span>
+        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#d1d1d6;"></span>
+        <span class="dot" style="width:14px;height:14px;border-radius:50%;background:#d1d1d6;"></span>
+      </div>
+      <div id="passcodeError" style="color:#ff3b30; text-align:center; min-height:24px;"></div>
+      <div class="numpad">
+        <div class="numpad-btn" data-num="1">1</div><div class="numpad-btn" data-num="2">2</div><div class="numpad-btn" data-num="3">3</div>
+        <div class="numpad-btn" data-num="4">4</div><div class="numpad-btn" data-num="5">5</div><div class="numpad-btn" data-num="6">6</div>
+        <div class="numpad-btn" data-num="7">7</div><div class="numpad-btn" data-num="8">8</div><div class="numpad-btn" data-num="9">9</div>
+        <div style="visibility:hidden;"></div><div class="numpad-btn" data-num="0">0</div><div class="numpad-btn" id="deletePassBtn"><i class="fas fa-delete-left"></i></div>
+      </div>
+    </div>
+  </div>
+  <!-- 主屏幕 -->
+  <div id="homeScreen" class="screen hidden-right" style="z-index:90;">
+    <div class="status-bar"><span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span></div>
+    <div class="desktop-grid" id="appGrid"></div>
+    <div class="home-bar"></div>
+  </div>
+  <!-- App容器 -->
+  <div id="appContainer" class="screen hidden-right" style="z-index:80;"></div>
+</div>
+<script>
+  (function(){
+    const STORAGE_KEY = 'ios_sim_v6';
+    let state = {
+      isLocked: true, passcodeInput: '', balance: 12800.50,
+      apiConfig: { address: '', key: '', model: '' },
+      apiPresets: [],
+      worldBook: { currentWorldId: null, worlds: [] },
+      friends: [
+        { id: 'fanbingbing', name: '范冰冰', avatar: '👩🏻', gender: '女', persona: '国际影星，热情开朗，喜欢分享时尚。', background: '娱乐圈一线明星，生活精致。' }
+      ],
+      currentChatFriendId: 'fanbingbing',
+      chats: { fanbingbing: [] },
+      videos: [
+        { id:1, title:'🐼 熊猫吃竹子', desc:'治愈系滚滚', content:'呆萌大熊猫悠闲啃竹子，氛围感拉满，适合慢生活治愈文案。', comments:[{author:'用户1',text:'好可爱'}] },
+        { id:2, title:'🌊 海边日落', desc:'温柔海风', content:'傍晚海边橘红色落日，海风拂面，人间温柔时刻。', comments:[] }
+      ],
+      currentVideoIndex: 0,
+      memos: {
+        normal: [],
+        role: {}
+      },
+      shopGoods: [
+        {id:1,name:'正宗酸辣粉',price:20,desc:'方便速食酸辣粉6桶装'},
+        {id:2,name:'网红奶茶',price:15,desc:'瓶装果味奶茶整箱'},
+        {id:3,name:'休闲小零食大礼包',price:39.9,desc:'混合口味零食组合'}
+      ],
+      orderList: [],
+      truthPool: [],
+      darePool: []
+    };
+    function loadState(){
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if(saved) try {
+        const parsed = JSON.parse(saved);
+        state = { ...state, ...parsed };
+        if(!state.worldBook) state.worldBook = { currentWorldId: null, worlds: [] };
+        if(!state.apiPresets) state.apiPresets = [];
+        if(!state.memos) state.memos = { normal: [], role: {} };
+        if(!state.orderList) state.orderList = [];
+        if(!state.truthPool) state.truthPool = [];
+        if(!state.darePool) state.darePool = [];
+      } catch(e){}
+    }
+    function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    loadState();
+    const lockScreen = document.getElementById('lockScreen');
+    const homeScreen = document.getElementById('homeScreen');
+    const appContainer = document.getElementById('appContainer');
+    const globalToast = document.getElementById('globalToast');
+    const passPanel = document.getElementById('passcodePanel');
+    const passDots = document.querySelectorAll('#passcodeDots .dot');
+    const passError = document.getElementById('passcodeError');
+    const lockTime = document.getElementById('lockTime');
+    const lockDate = document.getElementById('lockDate');
+    const notiStack = document.getElementById('notificationStack');
+    let currentScreen = 'lock', currentApp = null;
+    let tapCount = 0, lastTap = 0, tapTimer = null, touchStartY = 0;
+    function showToast(msg, type='info'){
+      globalToast.style.display='block'; globalToast.style.opacity='1'; globalToast.textContent=msg;
+      globalToast.className='global-toast';
+      if(type==='success') globalToast.classList.add('toast-success');
+      if(type==='error') globalToast.classList.add('toast-error');
+      setTimeout(()=>{ globalToast.style.opacity='0'; setTimeout(()=>{globalToast.style.display='none';},250); },2000);
+    }
+    function vibrate(){ if(navigator.vibrate) navigator.vibrate(20); }
+    function navigateTo(screenId, direction='forward'){
+      const screens = { lock: lockScreen, home: homeScreen, app: appContainer };
+      Object.values(screens).forEach(s => { s.classList.remove('hidden-left','hidden-right'); s.style.zIndex='50'; });
+      const target = screens[screenId];
+      if(direction==='forward'){ target.classList.remove('hidden-right'); target.style.zIndex='90'; }
+      else { target.classList.remove('hidden-left'); target.style.zIndex='90'; }
+      currentScreen = screenId;
+      if(screenId==='lock'){ state.isLocked=true; passPanel.style.display='none'; resetPasscode(); }
+      else state.isLocked=false;
+      updateTimeDate();
+    }
+    function goBackToHome(){ if(currentScreen==='app' && !state.isLocked){ navigateTo('home','backward'); currentApp=null; } }
+    function updateTimeDate(){
+      const now = new Date();
+      const timeStr = `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+      const weekdays = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+      const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日 ${weekdays[now.getDay()]}`;
+      lockTime.textContent=timeStr; lockDate.textContent=dateStr;
+      document.querySelectorAll('.status-bar span:first-child').forEach(el=>el.textContent=timeStr);
+    }
+    setInterval(updateTimeDate,1000); updateTimeDate();
+    function resetPasscode(){ state.passcodeInput=''; updatePassDots(); passError.textContent=''; }
+    function updatePassDots(){ passDots.forEach((dot,i)=> dot.style.background = i<state.passcodeInput.length ? '#1c1c1e' : '#d1d1d6'); }
+    function handlePassInput(num){
+      if(state.passcodeInput.length<6){
+        state.passcodeInput+=num; updatePassDots();
+        if(state.passcodeInput.length===6){
+          if(state.passcodeInput==='201314'){ showToast('解锁成功','success'); navigateTo('home','forward'); passPanel.style.display='none'; }
+          else { passError.textContent='密码错误'; vibrate(); state.passcodeInput=''; updatePassDots(); }
+        }
+      }
+    }
+    function setupFiveTap(){
+      document.addEventListener('click', ()=>{
+        const now=Date.now();
+        if(now-lastTap<500) tapCount++; else tapCount=1;
+        lastTap=now;
+        clearTimeout(tapTimer); tapTimer=setTimeout(()=>{tapCount=0;},500);
+        if(tapCount===5 && !state.isLocked){ showToast('返回锁屏'); navigateTo('lock','forward'); passPanel.style.display='none'; resetPasscode(); tapCount=0; }
+      });
+    }
+    function setupSwipeUp(){
+      document.addEventListener('touchstart', e=>{ touchStartY=e.touches[0].clientY; }, {passive:true});
+      document.addEventListener('touchend', e=>{
+        if(!touchStartY) return;
+        if(touchStartY > window.innerHeight-70 && touchStartY - e.changedTouches[0].clientY > 50){
+          if(currentScreen==='app' && !state.isLocked) goBackToHome();
+        }
+        touchStartY=0;
+      });
+    }
+    const apps = ['抖音','微信','设置','淘宝','备忘录','相机','日历','钱包','世界书','真心话大冒险'];
+    const appIcons = { 
+      '抖音':'fa-video','微信':'fa-weixin','设置':'fa-gear','淘宝':'fa-bag-shopping',
+      '备忘录':'fa-note-sticky','相机':'fa-camera','日历':'fa-calendar','钱包':'fa-wallet',
+      '世界书':'fa-book','真心话大冒险':'fa-dice'
+    };
+    function renderHome(){
+      const grid = document.getElementById('appGrid'); grid.innerHTML='';
+      apps.forEach(app=>{
+        const div=document.createElement('div'); div.className='app-icon';
+        div.innerHTML=`<i class="fas ${appIcons[app]}"></i><span>${app}</span>`;
+        div.onclick=()=>openApp(app);
+        grid.appendChild(div);
+      });
+    }
+    function openApp(appName){ currentApp=appName; navigateTo('app','forward'); renderAppView(appName); }
+    function renderAppView(app){
+      appContainer.innerHTML='';
+      const status = document.createElement('div'); status.className='status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.alignItems='center'; header.style.padding='8px 12px';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="globalBackBtn"></i><span style="font-weight:500;">${app}</span>`;
+      appContainer.appendChild(header);
+      document.getElementById('globalBackBtn').onclick = () => goBackToHome();
+      if(app==='微信') renderWeChatMain();
+      else if(app==='抖音') renderDouyin();
+      else if(app==='设置') renderSettings();
+      else if(app==='世界书') renderWorldBook();
+      else if(app==='淘宝') renderTaobao();
+      else if(app==='备忘录') renderMemo();
+      else if(app==='相机') renderCamera();
+      else if(app==='日历') renderCalendar();
+      else if(app==='钱包') renderWallet();
+      else if(app==='真心话大冒险') renderTruthDareGame();
+    }
+    function getWorldAndPersonaContext(){
+      let worldCtx = '';
+      if(state.worldBook.currentWorldId){
+        const world = state.worldBook.worlds.find(w=>w.id===state.worldBook.currentWorldId);
+        if(world) worldCtx = world.content;
+      }
+      let roleCtx = state.friends.map(f=>`角色：${f.name}，人设：${f.persona}，背景：${f.background}`).join('\n');
+      return {worldCtx, roleCtx};
+    }
+
+    // ========== 真心话大冒险 游戏主页面（加作答输入框） ==========
+    function renderTruthDareGame(){
+      const gameWrap = document.createElement('div');
+      gameWrap.className = 'game-wrap';
+      gameWrap.innerHTML = `
+        <h3>真心话大冒险转盘</h3>
+        <div class="wheel-box" id="gameWheel">开始转盘</div>
+        <div class="game-result" id="gameResult">
+          <p>点击下方【开始转盘】</p>
+          <p>随机抽取：人选 + 类型 + 题目</p>
+        </div>
+        <textarea id="answerInput" class="answer-input" placeholder="在这里写下你的回答/任务完成情况..."></textarea>
+        <div class="game-btn-group">
+          <button id="genPoolBtn">AI生成题库</button>
+          <button id="spinWheelBtn">开始转盘</button>
+        </div>
+        <div class="game-btn-group" style="margin-top:10px;">
+          <button id="submitAnswerBtn" style="flex:1;">提交回答</button>
+          <button id="finishAnswerBtn" style="flex:1;">本轮结束</button>
+        </div>
+        <div id="answerRecord" style="margin-top:12px;text-align:left;font-size:15px;color:#444;"></div>
+      `;
+      appContainer.appendChild(gameWrap);
+
+      const wheel = document.getElementById('gameWheel');
+      const resultBox = document.getElementById('gameResult');
+      const answerInput = document.getElementById('answerInput');
+      const answerRecord = document.getElementById('answerRecord');
+      let isSpinning = false;
+      let currentQuestion = '';
+
+      // AI生成题库
+      document.getElementById('genPoolBtn').onclick = async () => {
+        const {address,key,model} = state.apiConfig;
+        if(!address||!key){
+          showToast('请先去设置配置API','error');
+          return;
+        }
+        showToast('AI正在生成题库…');
+        try {
+          const res = await fetch(`${address}/chat/completions`,{
+            method:'POST',
+            headers:{
+              'Content-Type':'application/json',
+              'Authorization':`Bearer ${key}`
+            },
+            body:JSON.stringify({
+              model:model||'gpt-3.5-turbo',
+              messages:[{
+                role:'user',
+                content:'生成10条真心话题目、10条大冒险题目，严格按格式返回：真心话||题目1||题目2... 大冒险||题目1||题目2...，不要多余文字'
+              }]
+            })
+          });
+          const data = await res.json();
+          const content = data.choices[0].message.content.trim();
+          const parts = content.split('大冒险||');
+          const truthStr = parts[0].replace('真心话||','');
+          const dareStr = parts[1] || '';
+          
+          state.truthPool = truthStr.split('||').filter(item=>item.trim());
+          state.darePool = dareStr.split('||').filter(item=>item.trim());
+          saveState();
+          showToast('题库生成成功','success');
+          resultBox.innerHTML = `<p>✅ 题库已就绪</p><p>真心话${state.truthPool.length}题 | 大冒险${state.darePool.length}题</p>`;
+        } catch(e) {
+          showToast('题库生成失败','error');
+        }
+      };
+
+      // 转盘
+      document.getElementById('spinWheelBtn').onclick = () => {
+        if(isSpinning) return;
+        if(state.truthPool.length===0 || state.darePool.length===0){
+          showToast('请先生成题库','error');
+          return;
+        }
+        isSpinning = true;
+        wheel.classList.add('wheel-spin');
+        resultBox.innerHTML = '<p>转盘抽奖中…</p>';
+        answerInput.value = '';
+
+        setTimeout(()=>{
+          wheel.classList.remove('wheel-spin');
+          const randomFriend = state.friends[Math.floor(Math.random()*state.friends.length)];
+          const type = Math.random()>0.5 ? '真心话' : '大冒险';
+          let randomQ;
+          if(type==='真心话'){
+            randomQ = state.truthPool[Math.floor(Math.random()*state.truthPool.length)];
+          }else{
+            randomQ = state.darePool[Math.floor(Math.random()*state.darePool.length)];
+          }
+          currentQuestion = `人物：${randomFriend.name}｜${type}｜题目：${randomQ}`;
+          resultBox.innerHTML = `
+            <p><strong>🎯 选中人物：</strong>${randomFriend.name}</p>
+            <p><strong>📌 类型：</strong>${type}</p>
+            <p style="margin-top:10px;"><strong>📝 题目：</strong>${randomQ}</p>
+            <p style="margin-top:8px;color:#007aff;">请在下方输入你的回答</p>
+          `;
+          isSpinning = false;
+        },1200);
+      };
+
+      // 提交回答
+      document.getElementById('submitAnswerBtn').onclick = () => {
+        const ans = answerInput.value.trim();
+        if(!currentQuestion){
+          showToast('请先转盘抽题目','error');
+          return;
+        }
+        if(!ans){
+          showToast('请输入回答内容','error');
+          return;
+        }
+        answerRecord.innerHTML = `<p>📋 本轮记录：</p><p>${currentQuestion}</p><p>你的回答：${ans}</p>`;
+        showToast('回答已提交','success');
+      };
+
+      // 本轮结束重置
+      document.getElementById('finishAnswerBtn').onclick = () => {
+        resultBox.innerHTML = `<p>✅ 本轮结束</p><p>可重新转盘开始下一轮</p>`;
+        answerInput.value = '';
+        answerRecord.innerHTML = '';
+        currentQuestion = '';
+        showToast('本轮完成','success');
+      };
+    }
+
+    // ========== 微信 ==========
+    function renderWeChatMain(){
+      const div = document.createElement('div'); div.style.flex='1'; div.style.overflowY='auto';
+      div.innerHTML = `<div style="padding:12px; display:flex; justify-content:space-between; align-items:center;"><h3 style="font-weight:500;">微信</h3><i class="fas fa-plus" id="addFriendBtn" style="font-size:20px; color:#007aff;"></i></div>`;
+      state.friends.forEach(f=>{
+        const item = document.createElement('div'); item.className='friend-item';
+        item.innerHTML = `<span style="font-size:28px; margin-right:12px;">${f.avatar}</span><span>${f.name}</span>`;
+        item.onclick = ()=>{ state.currentChatFriendId=f.id; renderChatView(f.id); };
+        div.appendChild(item);
+      });
+      appContainer.appendChild(div);
+      document.getElementById('addFriendBtn').onclick = () => renderAddFriendForm();
+    }
+    function renderAddFriendForm(){
+      appContainer.innerHTML = '';
+      const status = document.createElement('div'); status.className = 'status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.alignItems='center'; header.style.padding='8px 12px';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="backToWeChat"></i><span style="font-weight:500;">添加角色</span>`;
+      appContainer.appendChild(header);
+      document.getElementById('backToWeChat').onclick = () => renderAppView('微信');
+      const form = document.createElement('div'); form.className = 'form-section';
+      form.innerHTML = `
+        <div>
+          <div class="form-label">姓名</div>
+          <input id="newName" placeholder="请输入姓名" style="width:100%;">
+        </div>
+        <div>
+          <div class="form-label">性别</div>
+          <input id="newGender" placeholder="如：男/女/其他" style="width:100%;">
+        </div>
+        <div>
+          <div class="form-label">人设</div>
+          <textarea id="newPersona" placeholder="性格、说话风格、爱好等" style="width:100%; height:80px;"></textarea>
+        </div>
+        <div>
+          <div class="form-label">背景</div>
+          <textarea id="newBackground" placeholder="角色背景故事、经历等" style="width:100%; height:80px;"></textarea>
+        </div>
+        <button id="saveNewFriendBtn" style="width:100%; margin-top:8px;">保存</button>
+      `;
+      appContainer.appendChild(form);
+      document.getElementById('saveNewFriendBtn').onclick = () => {
+        const name = document.getElementById('newName').value.trim();
+        if(!name) return showToast('请输入姓名','error');
+        const gender = document.getElementById('newGender').value.trim() || '未知';
+        const persona = document.getElementById('newPersona').value.trim();
+        const background = document.getElementById('newBackground').value.trim();
+        const id = Date.now().toString();
+        state.friends.push({ id, name, avatar: '👤', gender, persona, background });
+        state.chats[id] = [];
+        saveState();
+        renderAppView('微信');
+        showToast('角色已添加','success');
+      };
+    }
+    function renderChatView(friendId){
+      const friend = state.friends.find(f=>f.id===friendId);
+      if(!friend) return renderAppView('微信');
+      appContainer.innerHTML = '';
+      const status = document.createElement('div'); status.className='status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.padding='8px 12px'; header.style.alignItems='center';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="backChatBtn"></i><span>${friend.name}</span><i class="fas fa-ellipsis-h" id="chatSettingBtn" style="margin-left:auto; color:#007aff;"></i>`;
+      appContainer.appendChild(header);
+      document.getElementById('backChatBtn').onclick = () => renderAppView('微信');
+      const msgArea = document.createElement('div'); msgArea.style.flex='1'; msgArea.style.overflowY='auto'; msgArea.style.background='#fafafa';
+      (state.chats[friendId]||[]).forEach(m=> msgArea.appendChild(createBubble(m)));
+      appContainer.appendChild(msgArea);
+      const inputRow = document.createElement('div'); inputRow.style.display='flex'; inputRow.style.padding='8px'; inputRow.style.background='#fff'; inputRow.style.borderTop='0.5px solid #e5e5e5';
+      inputRow.innerHTML = `<input id="chatInput" placeholder="消息" style="flex:1; margin-right:8px;"><button id="sendMsgBtn">发送</button>`;
+      appContainer.appendChild(inputRow);
+      document.getElementById('sendMsgBtn').onclick = ()=> sendMessage(friendId);
+      document.getElementById('chatInput').addEventListener('keypress', e=>{ if(e.key==='Enter') sendMessage(friendId); });
+      document.getElementById('chatSettingBtn').onclick = ()=> showFriendSettings(friend);
+    }
+    function createBubble(msg){
+      const div = document.createElement('div');
+      div.className = msg.from==='me' ? 'bubble-right' : 'bubble-left';
+      div.textContent = msg.text; return div;
+    }
+    function getWorldContext(){
+      if(state.worldBook.currentWorldId){
+        const world = state.worldBook.worlds.find(w=>w.id===state.worldBook.currentWorldId);
+        return world ? world.content : '';
+      }
+      return '';
+    }
+    async function sendMessage(friendId){
+      const input = document.getElementById('chatInput');
+      if(!input) return;
+      const text = input.value.trim(); if(!text) return;
+      const friend = state.friends.find(f=>f.id===friendId);
+      if(!state.chats[friendId]) state.chats[friendId]=[];
+      state.chats[friendId].push({from:'me', text, timestamp:Date.now()});
+      input.value=''; renderChatView(friendId);
+      showToast('对方正在输入…');
+      setTimeout(async ()=>{
+        const {address, key, model} = state.apiConfig;
+        if(!address||!key){
+          state.chats[friendId].push({from:'other', text:'[请先配置API]'});
+          showToast('发送失败，请检查API','error');
+          renderChatView(friendId); saveState(); return;
+        }
+        const worldContext = getWorldContext();
+        const systemPrompt = `你是${friend.name}，性别${friend.gender||'未知'}。人设：${friend.persona||'友善的聊天伙伴'}。背景：${friend.background||''}。${worldContext ? '当前世界背景：'+worldContext : ''} 请用简短的分句回复，不要输出长段落。`;
+        try{
+          const controller = new AbortController();
+          const timeout = setTimeout(()=>controller.abort(), 10000);
+          const res = await fetch(`${address}/chat/completions`, {
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+            body: JSON.stringify({ model: model||'gpt-3.5-turbo', messages:[
+              {role:'system', content: systemPrompt},
+              {role:'user', content: text}
+            ]}),
+            signal: controller.signal
+          });
+          clearTimeout(timeout);
+          if(!res.ok) throw new Error();
+          const data = await res.json();
+          const reply = data.choices?.[0]?.message?.content || '...';
+          state.chats[friendId].push({from:'other', text: reply});
+        } catch(e){
+          state.chats[friendId].push({from:'other', text:'[API调用失败]'});
+          showToast('API调用错误','error');
+        }
+        renderChatView(friendId); saveState();
+      }, 1000);
+    }
+    function showFriendSettings(friend){
+      const actions = [
+        {text:'修改名称', action:()=>{const n=prompt('新名称',friend.name); if(n){friend.name=n; saveState(); renderChatView(friend.id);}}},
+        {text:'修改头像', action:()=>{const a=prompt('表情头像',friend.avatar); if(a){friend.avatar=a; saveState();}}},
+        {text:'修改人设', action:()=>{const p=prompt('新人设',friend.persona); if(p){friend.persona=p; saveState();}}},
+        {text:'修改背景', action:()=>{const b=prompt('新背景',friend.background); if(b!==null){friend.background=b; saveState();}}},
+        {text:'删除好友', action:()=>{if(confirm('删除？')){state.friends=state.friends.filter(f=>f.id!==friend.id); delete state.chats[friend.id]; saveState(); renderAppView('微信');}}}
+      ];
+      const menu = actions.map((a,i)=>`${i+1}. ${a.text}`).join('\n');
+      const choice = prompt('好友设置:\n'+menu);
+      if(choice && actions[parseInt(choice)-1]) actions[parseInt(choice)-1].action();
+    }
+    function renderDouyin(){
+      const container = document.createElement('div'); container.style.flex='1'; container.style.display='flex'; container.style.flexDirection='column';
+      const toolbar = document.createElement('div'); toolbar.style.padding='8px 12px'; toolbar.style.display='flex'; toolbar.style.gap='16px';
+      toolbar.innerHTML = `<i class="fas fa-sync" id="douyinRefresh" style="font-size:22px;cursor:pointer;"></i> 
+                           <span>当前世界/人设自动生成文案</span>`;
+      container.appendChild(toolbar);
+      const videoArea = document.createElement('div'); videoArea.style.flex='1'; videoArea.style.overflow='auto';
+      const currVid = state.videos[state.currentVideoIndex] || {title:'无视频',content:''};
+      const card = document.createElement('div'); card.className='video-card';
+      card.innerHTML = `
+        <h3>${currVid.title}</h3>
+        <p style="margin-top:8px;color:#666;">${currVid.desc}</p>
+        <p style="margin-top:12px;color:#333;">点击查看详情正文</p>
+      `;
+      card.onclick = ()=> renderVideoDetail(currVid);
+      videoArea.appendChild(card);
+      container.appendChild(videoArea);
+      const commentSec = document.createElement('div'); commentSec.style.maxHeight='160px'; commentSec.style.overflowY='auto';
+      commentSec.innerHTML = `<div style="padding:8px;font-weight:500;">评论区</div>`;
+      (currVid.comments||[]).forEach(c=>{
+        const d=document.createElement('div'); 
+        d.style.background='#f9f9f9'; d.style.margin='4px 8px'; d.style.padding='8px'; d.style.borderRadius='8px'; 
+        d.innerHTML=`<strong>${c.author}</strong>: ${c.text}`; 
+        commentSec.appendChild(d);
+      });
+      container.appendChild(commentSec);
+      const inputRow = document.createElement('div'); inputRow.style.display='flex'; inputRow.style.padding='8px'; inputRow.style.gap='8px';
+      inputRow.innerHTML = `<input id="commentInput" placeholder="评论..." style="flex:1;"><button id="postCommentBtn">发送</button><button id="aiCommentBtn">AI神评</button>`;
+      container.appendChild(inputRow);
+      appContainer.appendChild(container);
+      document.getElementById('douyinRefresh').onclick = async ()=>{
+        showToast('正在根据世界人设生成新帖子…');
+        const {address,key,model}=state.apiConfig;
+        if(!address||!key){ showToast('请先配置API','error'); return; }
+        const {worldCtx, roleCtx} = getWorldAndPersonaContext();
+        const prompt = `
+你现在是短视频文案创作者，结合以下世界观和角色人设，生成一条短视频：
+世界观背景：${worldCtx||'无'}
+登场角色人设：${roleCtx||'普通日常'}
+要求：
+1. 生成一个15字以内吸引人的短视频标题
+2. 生成一句简短简介
+3. 生成一段适合发抖音的完整正文文案
+返回格式严格用||分隔：标题||简介||正文
+不要多余解释，只按格式返回。
+        `;
+        try{
+          const res = await fetch(`${address}/chat/completions`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+            body:JSON.stringify({
+              model:model||'gpt-3.5-turbo',
+              messages:[{role:'user',content:prompt}]
+            })
+          });
+          if(!res.ok) throw new Error();
+          const data=await res.json(); 
+          const raw = data.choices[0].message.content.trim();
+          const arr = raw.split('||');
+          const title = arr[0]?.trim() || '新鲜日常短视频';
+          const desc = arr[1]?.trim() || '生活随拍';
+          const content = arr[2]?.trim() || '平凡生活里的小美好。';
+          state.videos.unshift({
+            id:Date.now(),
+            title,desc,content,
+            comments:[]
+          });
+          state.currentVideoIndex=0; 
+          saveState();
+          showToast('生成新帖子成功','success');
+          renderAppView('抖音');
+        }catch(e){
+          console.error(e);
+          showToast('生成失败，检查API配置','error');
+        }
+      };
+      document.getElementById('postCommentBtn').onclick = ()=>{
+        const input=document.getElementById('commentInput'); 
+        const t=input.value.trim(); 
+        if(!t) return;
+        if(!currVid.comments) currVid.comments=[]; 
+        currVid.comments.push({author:'我',text:t}); 
+        input.value=''; 
+        saveState(); 
+        renderAppView('抖音');
+      };
+      document.getElementById('aiCommentBtn').onclick = async ()=>{
+        const {address,key,model}=state.apiConfig; 
+        if(!address||!key){showToast('请先配置API','error');return;}
+        try{
+          const res=await fetch(`${address}/chat/completions`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+            body:JSON.stringify({
+              model:model||'gpt-3.5-turbo',
+              messages:[{role:'user',content:`根据这条抖音文案写一条幽默神评，20字内：${currVid.title} ${currVid.content}`}]
+            })
+          });
+          if(!res.ok) throw new Error();
+          const data=await res.json(); 
+          const aiText=data.choices[0].message.content.slice(0,30);
+          if(!currVid.comments) currVid.comments=[]; 
+          currVid.comments.push({author:'AI神评',text:aiText}); 
+          saveState(); 
+          renderAppView('抖音');
+        }catch(e){showToast('生成失败','error');}
+      };
+      let startY=0;
+      videoArea.addEventListener('touchstart',e=>{startY=e.touches[0].clientY});
+      videoArea.addEventListener('touchend',e=>{
+        const diff=startY-e.changedTouches[0].clientY;
+        if(Math.abs(diff)>40){
+          if(diff>0 && state.currentVideoIndex<state.videos.length-1) state.currentVideoIndex++;
+          else if(diff<0 && state.currentVideoIndex>0) state.currentVideoIndex--;
+          renderAppView('抖音');
+        }
+      });
+    }
+    function renderVideoDetail(vid){
+      appContainer.innerHTML='';
+      const status = document.createElement('div'); status.className='status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.alignItems='center'; header.style.padding='8px 12px';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="backVideoDetail"></i><span style="font-weight:500;">帖子详情</span>`;
+      appContainer.appendChild(header);
+      document.getElementById('backVideoDetail').onclick = ()=> renderAppView('抖音');
+      const contentBox = document.createElement('div');
+      contentBox.style.padding='16px';
+      contentBox.innerHTML = `
+        <h2>${vid.title}</h2>
+        <p style="margin:12px 0;color:#666;">${vid.desc}</p>
+        <hr style="margin:12px 0;">
+        <p style="line-height:1.6;">${vid.content}</p>
+      `;
+      appContainer.appendChild(contentBox);
+    }
+    function renderMemo(){
+      appContainer.innerHTML='';
+      const status = document.createElement('div'); status.className='status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.alignItems='center'; header.style.padding='8px 12px';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="backMemo"></i><span style="font-weight:500;">备忘录</span>`;
+      appContainer.appendChild(header);
+      document.getElementById('backMemo').onclick = ()=> renderAppView('备忘录');
+      const tabBox = document.createElement('div');
+      tabBox.style.display='flex';
+      tabBox.style.justifyContent='space-around';
+      tabBox.style.padding='8px';
+      tabBox.innerHTML = `<button id="tabNormal">普通备忘</button><button id="tabRole">角色备忘</button>`;
+      appContainer.appendChild(tabBox);
+      const listBox = document.createElement('div');
+      listBox.style.flex='1';
+      listBox.style.overflowY='auto';
+      listBox.id='memoListBox';
+      appContainer.appendChild(listBox);
+      const editBox = document.createElement('div');
+      editBox.style.padding='16px';
+      editBox.innerHTML = `
+        <textarea id="memoEditor" placeholder="在这里写备忘录内容..." style="width:100%;height:120px;"></textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button id="saveMemoBtn" style="flex:1;">保存</button>
+          <button id="newMemoBtn">新建</button>
+        </div>
+      `;
+      appContainer.appendChild(editBox);
+      renderNormalMemoList();
+      document.getElementById('tabNormal').onclick = renderNormalMemoList;
+      document.getElementById('tabRole').onclick = renderRoleMemoList;
+      document.getElementById('newMemoBtn').onclick = ()=>{
+        document.getElementById('memoEditor').value = '';
+      };
+      document.getElementById('saveMemoBtn').onclick = ()=>{
+        const val = document.getElementById('memoEditor').value.trim();
+        if(!val) return showToast('内容不能为空','error');
+        state.memos.normal.push({id:Date.now(),content:val});
+        saveState();
+        showToast('保存成功','success');
+        renderNormalMemoList();
+        document.getElementById('memoEditor').value='';
+      };
+    }
+    function renderNormalMemoList(){
+      const box = document.getElementById('memoListBox');
+      box.innerHTML='<div style="padding:8px;font-weight:500;">普通备忘列表</div>';
+      state.memos.normal.forEach((item,idx)=>{
+        const d = document.createElement('div');
+        d.className='memo-item';
+        d.textContent = item.content.substring(0,20)+'...';
+        d.onclick = ()=>{
+          document.getElementById('memoEditor').value = item.content;
+        };
+        box.appendChild(d);
+      });
+    }
+    function renderRoleMemoList(){
+      const box = document.getElementById('memoListBox');
+      box.innerHTML='<div style="padding:8px;font-weight:500;">选择角色查看专属备忘</div>';
+      state.friends.forEach(f=>{
+        const d = document.createElement('div');
+        d.className='memo-item';
+        d.textContent = f.name;
+        d.onclick = ()=> renderRoleMemoEdit(f.id);
+        box.appendChild(d);
+      });
+    }
+    function renderRoleMemoEdit(roleId){
+      if(!state.memos.role[roleId]) state.memos.role[roleId] = '';
+      document.getElementById('memoEditor').value = state.memos.role[roleId];
+      document.getElementById('saveMemoBtn').onclick = ()=>{
+        const val = document.getElementById('memoEditor').value.trim();
+        state.memos.role[roleId] = val;
+        saveState();
+        showToast('角色备忘已保存','success');
+      };
+    }
+    function renderTaobao(){
+      appContainer.innerHTML='';
+      const status = document.createElement('div'); status.className='status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.alignItems='center'; header.style.padding='8px 12px';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="backTaobao"></i><span style="font-weight:500;">淘宝购物</span>`;
+      appContainer.appendChild(header);
+      document.getElementById('backTaobao').onclick = ()=> renderAppView('淘宝');
+      const goodsBox = document.createElement('div');
+      goodsBox.style.flex='1';
+      goodsBox.style.overflowY='auto';
+      state.shopGoods.forEach(goods=>{
+        const item = document.createElement('div');
+        item.className='goods-item';
+        item.innerHTML = `
+          <h4>${goods.name}</h4>
+          <p>价格：¥${goods.price}</p>
+          <p>${goods.desc}</p>
+          <button class="buyBtn" data-id="${goods.id}" style="margin-top:8px;">立即下单</button>
+        `;
+        goodsBox.appendChild(item);
+      });
+      appContainer.appendChild(goodsBox);
+      document.querySelectorAll('.buyBtn').forEach(btn=>{
+        btn.onclick = ()=>{
+          const gid = parseInt(btn.dataset.id);
+          const goods = state.shopGoods.find(g=>g.id===gid);
+          if(!goods) return;
+          if(state.balance < goods.price){
+            showToast('余额不足，无法下单','error');
+            return;
+          }
+          state.balance = parseFloat((state.balance - goods.price).toFixed(2));
+          const order = {
+            id: Date.now(),
+            goodsName: goods.name,
+            price: goods.price,
+            time: new Date().toLocaleString()
+          };
+          state.orderList.push(order);
+          saveState();
+          showToast('下单成功，已扣款','success');
+          renderAppView('淘宝');
+        };
+      });
+      const orderBtn = document.createElement('div');
+      orderBtn.style.padding='12px';
+      orderBtn.innerHTML = `<button id="goOrderBtn" style="width:90%;margin:0 auto;display:block;">查看我的订单</button>`;
+      appContainer.appendChild(orderBtn);
+      document.getElementById('goOrderBtn').onclick = renderOrderList;
+    }
+    function renderOrderList(){
+      appContainer.innerHTML='';
+      const status = document.createElement('div'); status.className='status-bar';
+      status.innerHTML = `<span>9:41</span><span><i class="fas fa-signal"></i> <i class="fas fa-wifi"></i> <i class="fas fa-battery-full"></i></span>`;
+      appContainer.appendChild(status);
+      const header = document.createElement('div'); header.style.display='flex'; header.style.alignItems='center'; header.style.padding='8px 12px';
+      header.innerHTML = `<i class="fas fa-arrow-left back-arrow" id="backOrder"></i><span style="font-weight:500;">我的订单</span>`;
+      appContainer.appendChild(header);
+      document.getElementById('backOrder').onclick = ()=> renderAppView('淘宝');
+      const orderBox = document.createElement('div');
+      orderBox.style.flex='1';
+      orderBox.style.overflowY='auto';
+      if(state.orderList.length===0){
+        orderBox.innerHTML = '<div style="padding:16px;text-align:center;">暂无订单</div>';
+      }else{
+        state.orderList.forEach(o=>{
+          const d = document.createElement('div');
+          d.style.padding='12px';
+          d.style.margin='6px 12px';
+          d.style.background='#f9f9f9';
+          d.style.borderRadius='12px';
+          d.innerHTML = `
+            <p>商品：${o.goodsName}</p>
+            <p>金额：¥${o.price}</p>
+            <p>时间：${o.time}</p>
+          `;
+          orderBox.appendChild(d);
+        });
+      }
+      appContainer.appendChild(orderBox);
+    }
+    function renderSettings(){
+      const div = document.createElement('div'); div.style.padding='16px';
+      div.innerHTML = `
+        <h3 style="font-weight:500;">AI模型设置</h3>
+        <input id="apiAddr" placeholder="API地址" value="${state.apiConfig.address}" style="width:100%; margin:8px 0;">
+        <input id="apiKey" placeholder="API Key" value="${state.apiConfig.key}" style="width:100%; margin:8px 0;">
+        <button id="fetchModelsBtn">拉取模型列表</button>
+        <div class="scroll-box" id="modelScrollBox" style="display:none;"></div>
+        <p>当前模型: <strong id="currentModelLabel">${state.apiConfig.model||'未选择'}</strong></p>
+        <button id="saveApiBtn">保存配置</button>
+        <div style="margin-top:12px; display:flex; gap:8px;"><input id="presetName" placeholder="预设名称" style="flex:1;"><button id="savePresetBtn">保存为预设</button></div>
+        <select id="presetSelect" style="width:100%; margin-top:8px;"><option value="">加载预设...</option></select>
+      `;
+      appContainer.appendChild(div);
+      function updateModelScroll(models){
+        const box = document.getElementById('modelScrollBox'); box.style.display='block'; box.innerHTML='';
+        models.forEach(m=>{
+          const item = document.createElement('div'); item.className='model-item'; item.textContent=m.id;
+          if(m.id===state.apiConfig.model) item.classList.add('selected');
+          item.onclick = ()=>{
+            state.apiConfig.model = m.id;
+            document.getElementById('currentModelLabel').textContent = state.apiConfig.model;
+            document.querySelectorAll('.model-item').forEach(el=>el.classList.remove('selected'));
+            item.classList.add('selected');
+          };
+          box.appendChild(item);
+        });
+      }
+      document.getElementById('fetchModelsBtn').onclick = async ()=>{
+        const addr = document.getElementById('apiAddr').value.trim();
+        const key = document.getElementById('apiKey').value.trim();
+        if(!addr) return showToast('请输入API地址','error');
+        if(!key) return showToast('请输入API Key','error');
+        showToast('正在拉取模型列表…');
+        try{
+          const res = await fetch(`${addr}/models`,{headers:{Authorization:`Bearer ${key}`}});
+          if(!res.ok) throw new Error();
+          const data = await res.json();
+          updateModelScroll(data.data);
+          showToast('拉取成功','success');
+        }catch(e){ showToast('拉取失败','error'); }
+      };
+      document.getElementById('saveApiBtn').onclick = ()=>{
+        state.apiConfig.address = document.getElementById('apiAddr').value.trim();
+        state.apiConfig.key = document.getElementById('apiKey').value.trim();
+        saveState(); showToast('配置已保存','success');
+      };
+      document.getElementById('savePresetBtn').onclick = ()=>{
+        const name = document.getElementById('presetName').value.trim();
+        if(!name) return showToast('请输入预设名称','error');
+        const preset = { name, address: document.getElementById('apiAddr').value.trim(), key: document.getElementById('apiKey').value.trim(), model: state.apiConfig.model };
+        const existIdx = state.apiPresets.findIndex(p=>p.name===name);
+        if(existIdx>=0) state.apiPresets[existIdx] = preset;
+        else state.apiPresets.push(preset);
+        saveState(); updatePresetSelect(); showToast('预设已保存','success');
+      };
+      function updatePresetSelect(){
+        const sel = document.getElementById('presetSelect');
+        sel.innerHTML = '<option value="">加载预设...</option>';
+        state.apiPresets.forEach(p=>{ const opt = document.createElement('option'); opt.value=p.name; opt.textContent=p.name; sel.appendChild(opt); });
+      }
+      updatePresetSelect();
+      document.getElementById('presetSelect').onchange = (e)=>{
+        const name = e.target.value;
+        const preset = state.apiPresets.find(p=>p.name===name);
+        if(preset){
+          document.getElementById('apiAddr').value = preset.address;
+          document.getElementById('apiKey').value = preset.key;
+          state.apiConfig = { address: preset.address, key: preset.key, model: preset.model };
+          document.getElementById('currentModelLabel').textContent = state.apiConfig.model||'未选择';
+          saveState(); showToast('预设已加载','success');
+        }
+      };
+    }
+    function renderCamera(){ 
+      appContainer.innerHTML += '<div style="padding:16px;text-align:center;"><button style="padding:16px 30px;">拍照</button><p style="margin-top:20px;color:#666;">相机功能预留</p></div>'; 
+    }
+    function renderCalendar(){ 
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}年${now.getMonth()+1}月${now.getDate()}日`;
+      appContainer.innerHTML += `<div style="padding:16px;font-size:18px;">📅 ${dateStr}</div>`; 
+    }
+    function renderWallet(){ 
+      appContainer.innerHTML += `<div style="padding:16px;font-size:18px;">💰 钱包余额: ¥${state.balance.toFixed(2)}</div>`; 
+    }
+    function addNotification(app,msg){
+      const n=document.createElement('div'); 
+      n.style.background='#f9f9f9'; n.style.padding='12px'; n.style.borderRadius='12px'; n.style.color='#1c1c1e';
+      n.innerHTML=`<strong>${app}</strong><br>${msg}`; 
+      notiStack.appendChild(n);
+      if(notiStack.children.length>3) notiStack.removeChild(notiStack.children[0]);
+    }
+    function init(){
+      renderHome(); setupFiveTap(); setupSwipeUp();
+      document.querySelectorAll('.numpad-btn[data-num]').forEach(b=>b.onclick=(e)=>handlePassInput(e.currentTarget.dataset.num));
+      document.getElementById('deletePassBtn').onclick=()=>{state.passcodeInput=state.passcodeInput.slice(0,-1); updatePassDots();};
+      let lockTouchStart=0;
+      lockScreen.addEventListener('touchstart', e=>{lockTouchStart=e.touches[0].clientY});
+      lockScreen.addEventListener('touchend', e=>{ if(lockTouchStart-e.changedTouches[0].clientY>40) passPanel.style.display='block'; });
+      setTimeout(()=>addNotification('微信','范冰冰：在吗？'),2000);
+    }
+    init();
+  })();
+</script>
+</body>
+</html>
